@@ -3,20 +3,27 @@ package cmd
 import (
 	"fmt"
 	"github.com/mitchellh/go-homedir"
+	"github.com/niranjan94/bifrost/config"
+	"github.com/niranjan94/bifrost/utils"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
 	"strings"
 )
 
-var cfgFile string
-var DryRun bool
+var (
+	cfgFile string
+	DryRun bool
+	region string
+	stage string
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "bifrost",
 	Short: "Your bridge to microservices on AWS",
-	Long: `Deploy microservices to AWS using lambda & API Gateway with easy using cobra.`,
+	Long:  `Deploy microservices to AWS using lambda & API Gateway with easy using cobra.`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -29,15 +36,14 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.bifrost.yaml)")
+	cobra.OnInitialize(initLogger, initConfig)
+
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is ./bifrost.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&DryRun, "dry-run", "d", false, "dry run mode (default is false)")
-	if err := viper.BindPFlag("dryRun", rootCmd.PersistentFlags().Lookup("dry-run")); err != nil {
-		panic(err)
-	}
-	if err := viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config")); err != nil {
-		panic(err)
-	}
+	rootCmd.PersistentFlags().StringVarP(&stage, "stage", "s", "dev", "dry run mode (default is false)")
+	rootCmd.PersistentFlags().StringVarP(&region, "region", "r", "ap-southeast-1", "dry run mode (default is false)")
+
+	utils.Must(viper.BindPFlags(rootCmd.PersistentFlags()))
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -60,10 +66,22 @@ func initConfig() {
 		viper.AddConfigPath(home)
 		viper.AddConfigPath(".")
 		viper.SetConfigName(".bifrost")
+		viper.SetConfigName("bifrost")
 	}
 	viper.AutomaticEnv() // read in environment variables that match
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		logrus.Debug("Using config file: ", viper.ConfigFileUsed())
 	}
+	config.LoadDefaults()
+}
+
+func initLogger() {
+	logrus.SetFormatter(&logrus.TextFormatter{
+		DisableLevelTruncation: true,
+		DisableTimestamp:       true,
+		QuoteEmptyFields:       true,
+	})
+	logrus.SetOutput(os.Stdout)
+	logrus.SetLevel(logrus.DebugLevel)
 }
