@@ -1,7 +1,8 @@
 package cmd
 
 import (
-	"fmt"
+	"github.com/niranjan94/bifrost/provision/aws/functions"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -11,7 +12,8 @@ var deployCmd = &cobra.Command{
 	Short: "Deploy your stack to the cloud",
 	Long: `Deploy your stack to the cloud`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("deploy called")
+		logrus.Info("deploy called")
+		functions.Build()
 	},
 }
 
