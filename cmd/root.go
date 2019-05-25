@@ -76,6 +76,7 @@ func initConfig() {
 	config.LoadDefaults()
 }
 
+// initLogger initializes the logrus instance
 func initLogger() {
 	logrus.SetFormatter(&logrus.TextFormatter{
 		DisableLevelTruncation: true,

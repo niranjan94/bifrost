@@ -1,4 +1,4 @@
-package utils
+package docker
 
 import (
 	"github.com/docker/docker/client"
@@ -10,7 +10,9 @@ var (
 	dockerClient *client.Client
 )
 
-func GetDockerClient() *client.Client {
+// GetClient returns a new docker client created from the current environment
+// the client is created if not already
+func GetClient() *client.Client {
 	once.Do(func() {
 		cli, err := client.NewEnvClient()
 		if err != nil {

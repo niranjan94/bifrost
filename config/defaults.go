@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// LoadDefaults replaces the defaults with their resolved values so that they can be used in other parts directly
 func LoadDefaults() {
 	stringMap := viper.GetStringMap("defaults")
 	newMap := map[string]interface{}{}

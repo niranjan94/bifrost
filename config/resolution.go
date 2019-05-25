@@ -26,7 +26,7 @@ func isReference(value string) bool {
 	return value != "" && strings.HasPrefix(value, "${") && varExpressionMatchRegex.MatchString(value)
 }
 
-// getResolvedValue gets the value at a given key and also recursively resolves references as needed
+// getResolvedValue gets the value as an interface at a given key and also recursively resolves references as needed
 func getResolvedValue(key string) interface{} {
 	currentValue := viper.Get(key)
 	currentValueString, isString := currentValue.(string)
@@ -36,10 +36,14 @@ func getResolvedValue(key string) interface{} {
 	return MemoizedFn(currentValueString, "getResolvedValue", getValueFromReference)
 }
 
+// getResolvedStringMapStringValue gets the value at a given key as a map[string]string
+// and also recursively resolves references as needed
 func getResolvedStringMapStringValue(key string) interface{} {
 	return cast.ToStringMapString(getResolvedStringMapValue(key))
 }
 
+// getResolvedStringMapStringValue gets the value at a given key as a map of interfaces
+// and also recursively resolves references as needed
 func getResolvedStringMapValue(key string) interface{} {
 	mapValue := cast.ToStringMap(getResolvedValue(key))
 	for k, v := range mapValue {
