@@ -4,7 +4,8 @@ go 1.12
 
 require (
 	github.com/aws/aws-sdk-go v1.19.28 // indirect
-	github.com/docker/distribution v2.7.1+incompatible // indirect
+	github.com/davecgh/go-spew v1.1.1
+	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
