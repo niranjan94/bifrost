@@ -1,85 +1,178 @@
 package functions
 
 import (
-	"context"
+	"bytes"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/pkg/namesgenerator"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/niranjan94/bifrost/config"
 	"github.com/niranjan94/bifrost/utils"
+	"github.com/niranjan94/bifrost/utils/debug"
+	"github.com/niranjan94/bifrost/utils/docker"
 	"github.com/sirupsen/logrus"
-	"io"
-	"io/ioutil"
+	"os"
+	"path"
+	"path/filepath"
+	"text/template"
 )
 
-var containerIds []string
+var containerReferences = make(map[string]*docker.Container)
 
-func getContainerFor(runtime string) (string, error) {
-	ctx := context.Background()
-	cli := utils.GetDockerClient()
+const containerBase = "/cwd"
 
-	image := fmt.Sprintf("lambci/lambda:%s", runtime)
-	canonicalPath := fmt.Sprintf("docker.io/%s", image)
+// getContainerFor returns a reference to a running docker container for the given runtime
+// containers are created only when needed and are re-used if already present
+func getContainerFor(runtime string) (*docker.Container, error) {
+	if container, ok := containerReferences[runtime]; ok {
+		return container, nil
+	}
+	logrus.Infof("preparing %s build environment", runtime)
+	image := fmt.Sprintf("docker.io/lambci/lambda:build-%s", runtime)
 
-	logrus.Debug("looking up image ", canonicalPath)
+	mounts := []mount.Mount{
+		{
+			Type:   mount.TypeBind,
+			Source: utils.GetCwd(),
+			Target: containerBase,
+		},
+	}
 
-	reader, err := cli.ImagePull(ctx, canonicalPath, types.ImagePullOptions{})
+	container, err := docker.StartContainer(image, []string{"tail"}, []string{"-f", "/dev/null"}, mounts)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-
-	logrus.Debug("pulling image ", canonicalPath)
-	io.Copy(ioutil.Discard, reader)
-
-	containerName := fmt.Sprintf("bifrost_%s", namesgenerator.GetRandomName(1))
-
-	resp, err := cli.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: image,
-			Entrypoint: []string{"tail"},
-			Cmd:   []string{"-f", "/dev/null"},
-			Volumes: map[string]struct{}{},
-		}, nil, nil, containerName,
-	)
-	if err != nil {
-		return "", err
-	}
-
-	logrus.Debugf("created container %s:%s", containerName, resp.ID[0:12])
-
-	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
-		return "", err
-	}
-
-	logrus.Debugf("started container %s:%s", containerName, resp.ID[0:12])
-
-	return resp.ID, nil
+	containerReferences[runtime] = container
+	return container, nil
 }
 
-func cleanupContainers()  {
-	docker := utils.GetDockerClient()
-	ctx := context.Background()
-	logrus.Debug("cleaning up containers")
-	for _, id := range containerIds {
-		if err := docker.ContainerRemove(ctx, id, types.ContainerRemoveOptions{
-			Force: true,
-		}); err != nil {
-			logrus.Error(err)
-		}
+// getDirectories returns a set of directories related to the given cwd working directory
+// they can also be created if not present by passing makeDirectories as true
+func getDirectories(cwd string, makeDirectories bool) (rootDir string, buildDir string, packageDir string) {
+	rootDir = filepath.Join(cwd, config.GetString("serverless.rootDir"))
+	buildDir = filepath.Join(rootDir, config.GetString("serverless.package.BuildDir"))
+	packageDir = filepath.Join(buildDir, "packages")
+	if makeDirectories {
+		os.RemoveAll(buildDir)
+		os.MkdirAll(buildDir, 0751)
+		os.MkdirAll(packageDir, 0751)
 	}
+	return rootDir, buildDir, packageDir
 }
 
+// BuildScriptInput holds are the required data to generate the build script from the buildScriptTemplate
+type BuildScriptInput struct {
+	RootDir          string
+	BuildDir         string
+	BuildPath        string
+	PackageDir       string
+	SourcePath       string
+	PackageFile      string
+	RequirementsFile string
+
+	ShouldCleanup bool
+
+	GlobalRequirements []string
+	GlobalIncludes     []string
+}
+
+// buildScriptTemplate is the template for the build script that runs within the container
+const buildScriptTemplate string = `
+#!/bin/sh
+
+rm -rf  {{.BuildPath}}
+cp -rf {{.SourcePath}} {{.BuildDir}}
+cd {{.BuildPath}} && pip install -r {{.RequirementsFile}} -t .
+{{$BuildPath := .BuildPath}}
+
+{{range .GlobalRequirements}}
+	cd {{$BuildPath}} && pip install -r {{.}} -t .
+{{end}}
+
+{{range .GlobalIncludes}}
+	cp -rf {{.}} {{$BuildPath}}
+{{end}}
+
+cd {{.BuildPath}} && zip -r9 {{.PackageFile}} .
+
+{{if .ShouldCleanup}}
+	rm -rf {{.BuildPath}}
+	rm -- "$0"
+{{end}}
+`
+
+// Build starts the build process for all of the serverless functions
 func Build() {
+
+	defer func() {
+		logrus.Debug("cleaning up containers")
+		for _, c := range containerReferences {
+			if err := c.Remove(true); err != nil {
+				logrus.Error(err)
+			}
+		}
+	}()
+
 	functionsMap := config.GetStringMapSub("serverless.functions", true)
-	defer cleanupContainers()
-	for k, v := range functionsMap {
-		logrus.Info(k)
-		containerId, err := getContainerFor(v.GetString("runtime"))
+
+	input := BuildScriptInput{
+		ShouldCleanup: config.GetBool("serverless.package.cleanup"),
+	}
+
+	input.RootDir, input.BuildDir, input.PackageDir = getDirectories(containerBase, false)
+	_, localBuildDir, _ := getDirectories(utils.GetCwd(), true)
+
+	for _, name := range config.GetStringSlice("serverless.package.GlobalRequirements") {
+		input.GlobalRequirements = append(input.GlobalRequirements, path.Join(input.RootDir, name))
+	}
+
+	for _, name := range config.GetStringSlice("serverless.package.GlobalIncludes") {
+		input.GlobalIncludes = append(input.GlobalIncludes, path.Join(input.RootDir, name, "*"))
+	}
+
+	buildScriptTemplate := template.Must(template.New("buildScriptTemplate").Parse(buildScriptTemplate))
+
+	for name, function := range functionsMap {
+
+		function.SetDefault("source", name)
+
+		input.SourcePath = path.Join(input.RootDir, function.GetString("source"))
+		input.BuildPath = path.Join(input.BuildDir, path.Base(input.SourcePath))
+		input.RequirementsFile = path.Join(input.SourcePath, config.GetString("serverless.package.RequirementsFile"))
+		input.PackageFile = path.Join(input.PackageDir, name + ".zip")
+
+		var buildScript bytes.Buffer
+		if err := buildScriptTemplate.Execute(&buildScript, input); err != nil {
+			logrus.Error(err)
+			continue
+		}
+
+		container, err := getContainerFor(function.GetString("runtime"))
 		if err != nil {
 			logrus.Error(err)
+			continue
 		}
-		containerIds = append(containerIds, containerId)
+
+		buildScriptFilePath := filepath.Join(localBuildDir, "build.sh")
+		os.Remove(buildScriptFilePath)
+		buildScriptFile, err := os.OpenFile(buildScriptFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0711)
+		if err != nil {
+			logrus.Error(err)
+			continue
+		}
+
+		if _, err = buildScriptFile.Write(buildScript.Bytes()); err != nil {
+			logrus.Error(err)
+			continue
+		}
+
+		buildScriptFile.Close()
+
+		logrus.Info("building function ", name)
+		if output, err := container.RunCommand([]string{"/bin/sh", path.Join(input.BuildDir, "build.sh")}); err != nil {
+			logrus.Error(err)
+			debug.PrintMultilineOutput(output)
+		} else {
+			debug.PrintMultilineOutput(output)
+		}
+		logrus.Info("built function ", name)
 	}
 }
