@@ -3,13 +3,14 @@ module github.com/niranjan94/bifrost
 go 1.12
 
 require (
-	github.com/aws/aws-sdk-go v1.19.28 // indirect
-	github.com/davecgh/go-spew v1.1.1
-	github.com/docker/distribution v2.7.1+incompatible
+	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/Microsoft/go-winio v0.4.12 // indirect
+	github.com/aws/aws-sdk-go v1.19.28
+	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/hashicorp/golang-lru v0.5.1 // indirect
+	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible

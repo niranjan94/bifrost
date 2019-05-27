@@ -47,9 +47,18 @@ func getContainerFor(runtime string) (*docker.Container, error) {
 // getDirectories returns a set of directories related to the given cwd working directory
 // they can also be created if not present by passing makeDirectories as true
 func getDirectories(cwd string, makeDirectories bool) (rootDir string, buildDir string, packageDir string) {
-	rootDir = filepath.Join(cwd, config.GetString("serverless.rootDir"))
-	buildDir = filepath.Join(rootDir, config.GetString("serverless.package.BuildDir"))
-	packageDir = filepath.Join(buildDir, "packages")
+	var join func(...string) string
+
+	if makeDirectories {
+		join = filepath.Join
+	} else {
+		join = path.Join
+	}
+
+	rootDir = join(cwd, config.GetString("serverless.rootDir"))
+	buildDir = join(rootDir, config.GetString("serverless.package.BuildDir"))
+	packageDir = join(buildDir, "packages")
+
 	if makeDirectories {
 		os.RemoveAll(buildDir)
 		os.MkdirAll(buildDir, 0751)
@@ -100,8 +109,7 @@ cd {{.BuildPath}} && zip -r9 {{.PackageFile}} .
 `
 
 // Build starts the build process for all of the serverless functions
-func Build() {
-
+func Build() []*deploymentPackage {
 	defer func() {
 		logrus.Debug("cleaning up containers")
 		for _, c := range containerReferences {
@@ -118,7 +126,7 @@ func Build() {
 	}
 
 	input.RootDir, input.BuildDir, input.PackageDir = getDirectories(containerBase, false)
-	_, localBuildDir, _ := getDirectories(utils.GetCwd(), true)
+	_, localBuildDir, localPackageDir := getDirectories(utils.GetCwd(), true)
 
 	for _, name := range config.GetStringSlice("serverless.package.GlobalRequirements") {
 		input.GlobalRequirements = append(input.GlobalRequirements, path.Join(input.RootDir, name))
@@ -130,14 +138,23 @@ func Build() {
 
 	buildScriptTemplate := template.Must(template.New("buildScriptTemplate").Parse(buildScriptTemplate))
 
+	namePrefix := config.GetString("serverless.prefix")
+	nameSuffix := config.GetString("serverless.suffix")
+
+	var deploymentPackages []*deploymentPackage
+
 	for name, function := range functionsMap {
 
+		functionName := namePrefix + name + nameSuffix
+
 		function.SetDefault("source", name)
+
+		packageName := name + ".zip"
 
 		input.SourcePath = path.Join(input.RootDir, function.GetString("source"))
 		input.BuildPath = path.Join(input.BuildDir, path.Base(input.SourcePath))
 		input.RequirementsFile = path.Join(input.SourcePath, config.GetString("serverless.package.RequirementsFile"))
-		input.PackageFile = path.Join(input.PackageDir, name + ".zip")
+		input.PackageFile = path.Join(input.PackageDir, packageName)
 
 		var buildScript bytes.Buffer
 		if err := buildScriptTemplate.Execute(&buildScript, input); err != nil {
@@ -170,9 +187,15 @@ func Build() {
 		if output, err := container.RunCommand([]string{"/bin/sh", path.Join(input.BuildDir, "build.sh")}); err != nil {
 			logrus.Error(err)
 			debug.PrintMultilineOutput(output)
-		} else {
-			debug.PrintMultilineOutput(output)
 		}
 		logrus.Info("built function ", name)
+
+		deploymentPackages = append(deploymentPackages, &deploymentPackage{
+			name: name,
+			deployName: functionName,
+			packageFile: filepath.Join(localPackageDir, packageName),
+			config: function,
+		})
 	}
+	return deploymentPackages
 }

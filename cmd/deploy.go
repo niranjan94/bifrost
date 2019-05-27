@@ -10,10 +10,12 @@ import (
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "Deploy your stack to the cloud",
-	Long: `Deploy your stack to the cloud`,
+	Long:  `Deploy your stack to the cloud`,
 	Run: func(cmd *cobra.Command, args []string) {
 		logrus.Info("deploy called")
-		functions.Build()
+		functions.Deploy(
+			functions.Build(),
+		)
 	},
 }
 
