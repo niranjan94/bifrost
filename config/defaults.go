@@ -21,4 +21,6 @@ func LoadDefaults() {
 		}
 	}
 	viper.Set("defaults", newMap)
+	viper.Set("region", "ap-southeast-1")
+	viper.SetDefault("serverless.rootDir", ".")
 }
