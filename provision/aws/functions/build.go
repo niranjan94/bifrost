@@ -109,7 +109,7 @@ cd {{.BuildPath}} && zip -r9 {{.PackageFile}} .
 `
 
 // Build starts the build process for all of the serverless functions
-func Build() []*deploymentPackage {
+func Build() []*DeploymentPackage {
 	defer func() {
 		logrus.Debug("cleaning up containers")
 		for _, c := range containerReferences {
@@ -141,11 +141,14 @@ func Build() []*deploymentPackage {
 	namePrefix := config.GetString("serverless.prefix")
 	nameSuffix := config.GetString("serverless.suffix")
 
-	var deploymentPackages []*deploymentPackage
+	var deploymentPackages []*DeploymentPackage
 
 	for name, function := range functionsMap {
 
-		functionName := namePrefix + name + nameSuffix
+		function.SetDefault("prefix", namePrefix)
+		function.SetDefault("suffix", nameSuffix)
+
+		functionName := function.GetString("prefix") + name + function.GetString("suffix")
 
 		function.SetDefault("source", name)
 
@@ -190,11 +193,11 @@ func Build() []*deploymentPackage {
 		}
 		logrus.Info("built function ", name)
 
-		deploymentPackages = append(deploymentPackages, &deploymentPackage{
-			name: name,
-			deployName: functionName,
-			packageFile: filepath.Join(localPackageDir, packageName),
-			config: function,
+		deploymentPackages = append(deploymentPackages, &DeploymentPackage{
+			Name:         name,
+			FunctionName: functionName,
+			PackageFile:  filepath.Join(localPackageDir, packageName),
+			Config:       function,
 		})
 	}
 	return deploymentPackages
