@@ -36,7 +36,7 @@ func getContainerFor(runtime string) (*docker.Container, error) {
 		},
 	}
 
-	container, err := docker.StartContainer(image, []string{"tail"}, []string{"-f", "/dev/null"}, mounts)
+	container, err := docker.StartContainer(image, []string{"sleep"}, []string{"infinity"}, mounts)
 	if err != nil {
 		return nil, err
 	}
