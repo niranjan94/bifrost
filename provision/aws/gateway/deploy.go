@@ -19,6 +19,11 @@ func DeployStage() error {
 
 	logrus.Info("deploying stage ", stage)
 
+	if viper.GetBool("dryRun") {
+		logrus.Warn("dry run mode. skipping deploy.")
+		return nil
+	}
+
 	_, err := gatewaySvc.CreateDeployment(&apigateway.CreateDeploymentInput{
 		RestApiId: &restApiId,
 		StageName: aws.String(viper.GetString("defaults.stage")),

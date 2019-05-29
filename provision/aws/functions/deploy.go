@@ -203,6 +203,11 @@ func Deploy(deploymentPackages []*DeploymentPackage) []*DeploymentPackage {
 				return err
 			}
 
+			if viper.GetBool("dryRun") {
+				logrus.Warn("dry run mode. skipping deploy.")
+				return nil
+			}
+
 			if shouldCreate {
 				deployed, err = lambdaSvc.CreateFunction(functionInput)
 				if err != nil {

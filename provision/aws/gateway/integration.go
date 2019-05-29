@@ -102,6 +102,11 @@ func IntegrateFunctions(functions []*functions.DeploymentPackage) error {
 				resource := getResourceByPath(resourcePath)
 				if resource != nil {
 					logrus.Infof("updating integration for %s resource %s", method, resourcePath)
+					if viper.GetBool("dryRun") {
+						logrus.Warn("dry run mode. skipping update.")
+						continue
+					}
+
 					if _, err := gatewaySvc.UpdateIntegration(&apigateway.UpdateIntegrationInput{
 						RestApiId: &restApiId,
 						ResourceId: resource.Id,
@@ -130,6 +135,10 @@ func IntegrateFunctions(functions []*functions.DeploymentPackage) error {
 		if authorizerId := cfg.GetString("api.authorizerId"); authorizerId != "" {
 			invokeArn := awsutils.GetAuthorizerArn(restApiId, authorizerId).String()
 			logrus.Infof("updating authorizer %s", authorizerId)
+			if viper.GetBool("dryRun") {
+				logrus.Warn("dry run mode. skipping update.")
+				continue
+			}
 			if _, err := gatewaySvc.UpdateAuthorizer(&apigateway.UpdateAuthorizerInput{
 				RestApiId:    &restApiId,
 				AuthorizerId: &authorizerId,

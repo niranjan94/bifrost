@@ -9,6 +9,7 @@ import (
 	"github.com/niranjan94/bifrost/utils"
 	awsutils "github.com/niranjan94/bifrost/utils/aws"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"reflect"
 )
 
@@ -75,6 +76,11 @@ func IntegrateFunctions(functions []*functions.DeploymentPackage) error {
 				continue
 			}
 			triggerField.Set(reflect.ValueOf(&function.AliasArn))
+		}
+
+		if viper.GetBool("dryRun") {
+			logrus.Warn("dry run mode. skipping activate.")
+			continue
 		}
 
 		if _, err := cognitoSvc.UpdateUserPool(&cognitoidentityprovider.UpdateUserPoolInput{

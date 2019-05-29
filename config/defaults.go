@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -21,6 +22,11 @@ func LoadDefaults() {
 		}
 	}
 	viper.Set("defaults", newMap)
-	viper.Set("region", "ap-southeast-1")
+	viper.Set("dryRun", viper.GetBool("dry-run"))
+	viper.SetDefault("region", "ap-southeast-1")
 	viper.SetDefault("serverless.rootDir", ".")
+	if viper.GetBool("dryRun") {
+		logrus.Warn("running in DRY RUN mode. No changes will be persisted to cloud service.")
+	}
+
 }
