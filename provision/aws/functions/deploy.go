@@ -155,7 +155,7 @@ func Deploy(deploymentPackages []*DeploymentPackage) []*DeploymentPackage {
 
 			if functionTags != nil {
 				for k, v := range functionTags {
-					existingFunctionTags[strings.ToUpper(k)] = aws.String(v)
+					existingFunctionTags[k] = aws.String(v)
 				}
 			}
 

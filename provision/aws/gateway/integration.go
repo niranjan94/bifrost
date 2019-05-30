@@ -95,12 +95,12 @@ func IntegrateFunctions(functions []*functions.DeploymentPackage) error {
 		}
 
 		for _, resourceString := range resources {
-			if resource := strings.Split(cfg.GetString(resourceString), ":"); len(resource) >= 2 {
+			if resource := strings.Split(resourceString, ":"); len(resource) >= 2 {
 				method := strings.ToUpper(resource[0])
 				resourcePath := resource[1]
 				invokeArn := awsutils.GetInvokeApiArn(restApiId, stage, method, path.Join(resourcePrefix, resourcePath)).String()
-				resource := getResourceByPath(resourcePath)
-				if resource != nil {
+				gatewayResource := getResourceByPath(resourcePath)
+				if gatewayResource != nil {
 					logrus.Infof("updating integration for %s resource %s", method, resourcePath)
 					if viper.GetBool("dryRun") {
 						logrus.Warn("dry run mode. skipping update.")
@@ -108,8 +108,8 @@ func IntegrateFunctions(functions []*functions.DeploymentPackage) error {
 					}
 
 					if _, err := gatewaySvc.UpdateIntegration(&apigateway.UpdateIntegrationInput{
-						RestApiId: &restApiId,
-						ResourceId: resource.Id,
+						RestApiId:  &restApiId,
+						ResourceId: gatewayResource.Id,
 						HttpMethod: &method,
 						PatchOperations: []*apigateway.PatchOperation{
 							{
