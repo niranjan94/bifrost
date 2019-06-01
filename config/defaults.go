@@ -23,6 +23,7 @@ func LoadDefaults() {
 	}
 	viper.Set("defaults", newMap)
 	viper.Set("dryRun", viper.GetBool("dry-run"))
+	viper.Set("filter", viper.GetString("only"))
 	viper.SetDefault("region", "ap-southeast-1")
 	viper.SetDefault("serverless.rootDir", ".")
 	if viper.GetBool("dryRun") {

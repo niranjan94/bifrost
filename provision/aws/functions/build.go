@@ -9,9 +9,11 @@ import (
 	"github.com/niranjan94/bifrost/utils/debug"
 	"github.com/niranjan94/bifrost/utils/docker"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"text/template"
 )
 
@@ -83,6 +85,14 @@ type BuildScriptInput struct {
 	GlobalIncludes     []string
 }
 
+func getFilters() []string {
+	filtersString := strings.TrimSpace(viper.GetString("filter"))
+	if filtersString == "" {
+		return []string{}
+	}
+	return strings.Split(filtersString, ",")
+}
+
 // buildScriptTemplate is the template for the build script that runs within the container
 const buildScriptTemplate string = `
 #!/bin/sh
@@ -143,7 +153,13 @@ func Build() []*DeploymentPackage {
 
 	var deploymentPackages []*DeploymentPackage
 
+	filters := getFilters()
+
 	for name, function := range functionsMap {
+
+		if len(filters) > 0 && !utils.StringSliceContains(filters, name) {
+			continue
+		}
 
 		function.SetDefault("prefix", namePrefix)
 		function.SetDefault("suffix", nameSuffix)
