@@ -10,6 +10,10 @@ import (
 )
 
 func DeployStage() error {
+	if viper.GetBool("functions-only") {
+		return nil
+	}
+
 	restApiId := config.GetString("apiGateway.restApiId")
 	if restApiId == "" {
 		return nil

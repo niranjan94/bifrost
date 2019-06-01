@@ -33,6 +33,9 @@ func addInvokePermission(aliasArn string, invokeArn string) error {
 }
 
 func IntegrateFunctions(functions []*functions.DeploymentPackage) error {
+	if viper.GetBool("functions-only") {
+		return nil
+	}
 
 	restApiId := config.GetString("apiGateway.restApiId")
 	if restApiId == "" {

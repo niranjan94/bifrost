@@ -32,6 +32,9 @@ func addInvokePermission(aliasArn string, poolArn string) error {
 }
 
 func IntegrateFunctions(functions []*functions.DeploymentPackage) error {
+	if viper.GetBool("functions-only") {
+		return nil
+	}
 
 	userPools := config.GetStringMapString("cognito.userPools")
 	logrus.Info(userPools)
