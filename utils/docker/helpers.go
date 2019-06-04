@@ -1,11 +1,13 @@
 package docker
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"github.com/docker/docker/api/types"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"io"
-	"io/ioutil"
 )
 
 // RemoveContainer removes the container with containerId.
@@ -45,9 +47,20 @@ func RunCommand(containerId string, command []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	outputBytes, err := ioutil.ReadAll(res.Reader)
-	if err != nil {
-		return "", err
+
+	var outputBytes []byte
+
+	scanner := bufio.NewScanner(res.Reader)
+	for scanner.Scan() {
+		if viper.GetBool("verbose") {
+			logrus.Debug(scanner.Text())
+		}
+		outputBytes = append(outputBytes, scanner.Bytes()...)
+		outputBytes = append(outputBytes, []byte("\n")...)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return string(outputBytes), err
 	}
 
 	info, err := docker.ContainerExecInspect(ctx, execId.ID)

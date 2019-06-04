@@ -3,7 +3,6 @@ module github.com/niranjan94/bifrost
 go 1.12
 
 require (
-	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/Microsoft/go-winio v0.4.12 // indirect
 	github.com/aws/aws-sdk-go v1.19.42
 	github.com/davecgh/go-spew v1.1.1
@@ -11,7 +10,6 @@ require (
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -20,5 +18,4 @@ require (
 	github.com/spf13/cast v1.3.0
 	github.com/spf13/cobra v0.0.4
 	github.com/spf13/viper v1.4.0
-	golang.org/x/net v0.0.0-20190509222800-a4d6f7feada5 // indirect
 )

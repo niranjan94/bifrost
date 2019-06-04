@@ -19,6 +19,7 @@ var (
 	stage string
 	functionOnly bool
 	filter string
+	verbose bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -45,6 +46,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&stage, "stage", "s", "dev", "Stage to use (default is dev)")
 	rootCmd.PersistentFlags().StringVarP(&region, "region", "r", "ap-southeast-1", "region (default is ap-southeast-1)")
 	rootCmd.PersistentFlags().BoolVar(&functionOnly, "functions-only", false, "Deploy only functions")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Verbose mode")
 	rootCmd.PersistentFlags().StringVar(&filter, "only", "", "Deploy only specific resources")
 
 	utils.Must(viper.BindPFlags(rootCmd.PersistentFlags()))
