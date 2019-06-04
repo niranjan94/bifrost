@@ -19,6 +19,6 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cast v1.3.0
 	github.com/spf13/cobra v0.0.4
-	github.com/spf13/viper v1.3.2
+	github.com/spf13/viper v1.4.0
 	golang.org/x/net v0.0.0-20190509222800-a4d6f7feada5 // indirect
 )
