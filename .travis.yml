@@ -4,10 +4,10 @@ go:
   - "1.x"
 
 before_install:
-  - make deps
+  - go mod download
 
 script:
-  - make build
+  - go build -v -ldflags="-s -w"
 
 deploy:
   - provider: script
