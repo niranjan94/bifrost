@@ -11,6 +11,8 @@ before_install:
 
 script:
   - go build -v -ldflags="-s -w"
+  - file ./bifrost
+  - rm -rf ./bifrost
 
 deploy:
   - provider: script
