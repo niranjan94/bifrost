@@ -1,0 +1,46 @@
+project_name: bifrost
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - env:
+      - 'CGO_ENABLED=0'
+    ldflags:
+      - '-s -w'
+    goos:
+      - linux
+      - darwin
+      - windows
+
+release:
+  github:
+    owner: niranjan94
+    name: bifrost
+
+archive:
+  replacements:
+    darwin: Darwin
+    linux: Linux
+    windows: Windows
+    386: i386
+    amd64: x86_64
+  format_overrides:
+    - goos: windows
+      format: zip
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ .Tag }}-snapshot"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^scripts:'
+      - '^tmp:'
