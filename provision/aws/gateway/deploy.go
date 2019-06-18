@@ -3,6 +3,7 @@ package gateway
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/apigateway"
+	"github.com/aws/aws-sdk-go/service/apigatewayv2"
 	"github.com/niranjan94/bifrost/config"
 	awsutils "github.com/niranjan94/bifrost/utils/aws"
 	"github.com/sirupsen/logrus"
@@ -18,7 +19,10 @@ func DeployStage() error {
 	if restApiId == "" {
 		return nil
 	}
+	wsApiId := config.GetString("apiGateway.wsApiId")
 	gatewaySvc := apigateway.New(awsutils.GetSession())
+	wsGatewaySvc := apigatewayv2.New(awsutils.GetSession())
+
 	stage := viper.GetString("defaults.stage")
 
 	logrus.Info("deploying stage ", stage)
@@ -32,5 +36,14 @@ func DeployStage() error {
 		RestApiId: &restApiId,
 		StageName: aws.String(viper.GetString("defaults.stage")),
 	})
+
+	if wsApiId != "" {
+		if _, err := wsGatewaySvc.CreateDeployment(&apigatewayv2.CreateDeploymentInput{
+			ApiId: &wsApiId,
+			StageName: aws.String(viper.GetString("defaults.stage")),
+		}); err != nil {
+			logrus.Error(err)
+		}
+	}
 	return err
 }

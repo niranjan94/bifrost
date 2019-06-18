@@ -122,7 +122,7 @@ func IntegrateFunctions(functions []*functions.DeploymentPackage) error {
 		cfg := function.Config
 		stage := cfg.GetString("stage")
 
-		logrus.Infof("activating %s on REST API %s", function.FunctionName, restApiId)
+		logrus.Infof("activating %s on APIs", function.FunctionName)
 
 		gatewayLambdaInvocationArn := awsutils.GetGatewayLambdaInvokeArn(function.FunctionArn + ":${stageVariables.lambdaAlias}").String()
 
@@ -178,7 +178,7 @@ func IntegrateFunctions(functions []*functions.DeploymentPackage) error {
 			for _, resourceString := range wsResources {
 				gatewayResource := getWsResourceByKey(resourceString)
 				if gatewayResource != nil {
-					logrus.Infof("updating integration for resource %s", gatewayResource.RouteKey)
+					logrus.Infof("updating integration for WS resource %s", *gatewayResource.RouteKey)
 					if viper.GetBool("dryRun") {
 						logrus.Warn("dry run mode. skipping update.")
 						continue
@@ -244,6 +244,9 @@ func IntegrateFunctions(functions []*functions.DeploymentPackage) error {
 				}); err != nil {
 					logrus.Error(err)
 				}
+
+				logrus.Info("giving API Gateway invoke permissions")
+
 				if err := addInvokePermission(function.AliasArn, invokeArn); err != nil {
 					logrus.Error(err)
 					continue
@@ -254,7 +257,7 @@ func IntegrateFunctions(functions []*functions.DeploymentPackage) error {
 
 		if wsAuthorizerId := cfg.GetString("api.wsAuthorizerId"); wsApiId != "" && wsAuthorizerId != "" {
 			invokeArn := awsutils.GetAuthorizerArn(wsApiId, wsAuthorizerId).String()
-			logrus.Infof("updating authorizer %s", wsAuthorizerId)
+			logrus.Infof("updating WS authorizer %s", wsAuthorizerId)
 			if viper.GetBool("dryRun") {
 				logrus.Warn("dry run mode. skipping update.")
 				continue
@@ -288,14 +291,14 @@ func IntegrateFunctions(functions []*functions.DeploymentPackage) error {
 			}
 
 
+			logrus.Info("giving API Gateway invoke permissions")
+
 			if err := addInvokePermission(function.AliasArn, invokeArn); err != nil {
 				logrus.Error(err)
 				continue
 			}
 
 		}
-
-		logrus.Info("giving API Gateway invoke permissions")
 	}
 
 	return nil
