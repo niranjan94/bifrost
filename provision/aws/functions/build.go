@@ -99,12 +99,13 @@ const buildScriptTemplate string = `
 
 rm -rf  {{.BuildPath}}
 cp -rf {{.SourcePath}} {{.BuildDir}}
-cd {{.BuildPath}} && pip install -r {{.RequirementsFile}} -t .
 {{$BuildPath := .BuildPath}}
 
 {{range .GlobalRequirements}}
 	cd {{$BuildPath}} && pip install -r {{.}} -t .
 {{end}}
+
+cd {{.BuildPath}} && pip install -r {{.RequirementsFile}} -t .
 
 {{range .GlobalIncludes}}
 	cp -rf {{.}} {{$BuildPath}}
