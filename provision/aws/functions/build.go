@@ -144,7 +144,7 @@ func Build() []*DeploymentPackage {
 	}
 
 	for _, name := range config.GetStringSlice("serverless.package.GlobalIncludes") {
-		input.GlobalIncludes = append(input.GlobalIncludes, path.Join(input.RootDir, name, "*"))
+		input.GlobalIncludes = append(input.GlobalIncludes, path.Join(input.RootDir, name))
 	}
 
 	buildScriptTemplate := template.Must(template.New("buildScriptTemplate").Parse(buildScriptTemplate))
